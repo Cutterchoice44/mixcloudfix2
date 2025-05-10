@@ -67,20 +67,33 @@ async function loadArchives() {
       iframe.className = 'mixcloud-iframe';
       iframe.src = `https://www.mixcloud.com/widget/iframe/?hide_cover=1&light=1&feed=${feed}`;
       iframe.loading = 'lazy';
+      iframe.width = '100%';
+      iframe.height = '120';
+      iframe.frameBorder = '0';
       item.appendChild(iframe);
 
-      const remove = document.createElement('a');
-      remove.href = '#';
-      remove.className = 'remove-link';
-      remove.textContent = 'Remove show';
-      remove.addEventListener('click', e => {
-        e.preventDefault();
-        deleteMixcloud(idx);
-      });
-      item.appendChild(remove);
+      if (!isMobile) {
+        const remove = document.createElement('a');
+        remove.href = '#';
+        remove.className = 'remove-link';
+        remove.textContent = 'Remove show';
+        remove.addEventListener('click', e => {
+          e.preventDefault();
+          deleteMixcloud(idx);
+        });
+        item.appendChild(remove);
+      }
 
       container.prepend(item);
     });
+
+    shuffleIframesDaily();
+
+    // Reload Mixcloud's widget script for embeds
+    const scriptTag = document.createElement('script');
+    scriptTag.src = 'https://widget.mixcloud.com/widget.js';
+    scriptTag.async = true;
+    document.body.appendChild(scriptTag);
 
   } catch (err) {
     console.error('Archive load error:', err);
@@ -132,7 +145,7 @@ async function deleteMixcloud(index) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4) DATA FETCHERS (Live, Schedule, Now Playing Archive)
+// 4) DATA FETCHERS (Live, Schedule, Now Playing)
 // ─────────────────────────────────────────────────────────────────────────────
 async function fetchLiveNow() {
   try {
@@ -193,8 +206,7 @@ async function fetchWeeklySchedule() {
         const art = ev.metadata?.artwork?.default || ev.metadata?.artwork?.original;
         if (art) {
           const img = document.createElement('img');
-          img.src = art;
-          img.alt = `${ev.title} artwork`;
+          img.src = art; img.alt = `${ev.title} artwork`;
           img.style.cssText = 'width:30px;height:30px;object-fit:cover;border-radius:3px;';
           wrap.appendChild(img);
         }
@@ -253,9 +265,9 @@ function openChatPopup() {
     window.open(url,'CuttersChatPopup','width=400,height=700,resizable=yes,scrollbars=yes');
   }
 }
+
 function closeChatModal(){
-  const m=document.getElementById('chatModal'),
-        i=document.getElementById('chatModalIframe');
+  const m=document.getElementById('chatModal'),i=document.getElementById('chatModalIframe');
   if(m&&i){m.style.display='none';i.src='';}
 }
 
@@ -270,11 +282,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   setInterval(fetchLiveNow,30000);
   setInterval(fetchNowPlayingArchive,30000);
 
-  if(isMobile){
+  if(isMobile) {
+    // remove Mixcloud section entirely on mobile
     document.querySelector('.mixcloud')?.remove();
   } else {
-    document.querySelectorAll('iframe.mixcloud-iframe').forEach(ifr=>{
-      ifr.src = ifr.src||ifr.dataset.src;
+    // ensure preloaded iframes render
+    document.querySelectorAll('iframe.mixcloud-iframe').forEach(ifr => {
+      ifr.src = ifr.src || ifr.dataset.src;
     });
     shuffleIframesDaily();
     const s=document.createElement('script');
